@@ -8,7 +8,7 @@ output: html_document
 
 
 ## Synopsis
-This paper will attempt to build a machine learning model using the 'Weight Lifting Dataset' in order to predict the efficacy with which a subject performs a weight lifting exercise.
+This paper will attempt to build a machine learning model using the 'Weight Lifting Dataset' in order to predict the correctness (or not) with which a subject performs a weight lifting exercise based upon data measured with commercially available sensing devices.
 
 The interested reader is referred to http://groupware.les.inf.puc-rio.br/har for further information on this dataset and it's characteristics.
 
@@ -55,7 +55,7 @@ require(randomForest)
 ```
 
 ## Exploratory Analysis
-An inspection of the data frame dimensions indicates that the available data contains nearly 20,000 rows of 160 columns. This is a substantial number of predictors with which to build a model, so some reduction techniques will be applied to select a smaller set of predictors.
+An inspection of the data frame dimensions indicates that the available data contains nearly 20,000 rows of 160 columns. This is a substantial number of predictors with which to attempt to build a model, so some reduction techniques will be applied to select a smaller set of predictors.
 
 The various types and numbers of column classes are as follows.
 
@@ -104,7 +104,7 @@ Other areas of concern are
 - There *may* be columns with low overall variance in the data - limiting their usefulness for training purposes
 - There *may* be columns that are highly correlated to each other -  rendering some columns redundant for training purposes
 
-The reader might question the wisdom of removing the raw_timestamp_part_n columns. The model is ultimately intended to evaluate the efficacy of a given action performed by a subject. The very fact that there are many time-adjacent data samples available each second, for each subject, would lend weight to the idea that analysing a time-sequenced group of samples could be of service in building an accurate and useful model. However the available data is classified on **every available row** - lending weight to the idea that single point-in-time samples are also of value when training.
+The reader might question the wisdom of removing the raw_timestamp_part_n columns. The model is ultimately intended to evaluate the correctness of a given action performed by a subject. The very fact that there are many time-adjacent data samples available each second, for each subject, would lend weight to the idea that analysing a time-sequenced group of samples could be of service in building an accurate and useful model. However the available data is classified on **every available row** - lending weight to the idea that single point-in-time samples are also of value when training.
 
 Additionally, since the final test set contains *no* time adjacent samples and contains only single point-in-time measurements, the potential benefits of time sequence based analysis are rendered null and void. Am I cheating by having an insight into the final testing methodology and using this to guide my covariate selection process ? - I'll leave that up to you.
 
@@ -383,7 +383,7 @@ print(paste("The following training set column will be included in the model : "
 ```
 
 ## Missing Values Imputation
-The data set which will be used to generate the model is sufficiently clean that **no** missing values need be imputed.
+The data set which will be used to generate the model is now sufficiently clean that **no** missing values need be imputed.
 A check of the total number of NA values in the training set confirms this.
 
 
@@ -400,18 +400,18 @@ The technique of repeated K-fold cross validation has been selected for this exe
 
 
 ```r
-trainOptions <- trainControl(method = "repeatedcv", number = 3, repeats = 3, verboseIter = TRUE)
+trainOptions <- trainControl(method = "repeatedcv", number = 3, repeats = 3, verboseIter = FALSE)
 ```
 
 
 ```r
 set.seed(1)
-# model <- train(classe ~ ., data = df.trainData, method = "rf", trControl = trainOptions)
+model <- train(classe ~ ., data = df.trainData, method = "rf", trControl = trainOptions)
 ```
 
 ## Results
 
-A confusion matrix of the model applied to the test data gives an estimate of 97.8%  for the out of sample accuracy of the final model
+A confusion matrix of the model applied to the test data gives an estimate of 97.8% for the out of sample accuracy of the final model.
 
 
 ```r
@@ -452,42 +452,16 @@ confusionMatrix(df.testData$classe, predict(model, df.testData))
 ## Balanced Accuracy      0.9924   0.9864   0.9696   0.9870   0.9959
 ```
 
-The output of 'varImp' shows the relative importance of the variables used in the model
+The variable importance plot shows the relative importance of the variables used in the model. A larger decrease in the Gini importance factor indicates a greater contribution toward error reduction by that variable.
 
 
 ```r
-varImp(model)
+varImpPlot(model$finalModel, main = "Variable Importance Plot")
 ```
 
-```
-## rf variable importance
-## 
-##   only 20 most important variables shown (out of 24)
-## 
-##                      Overall
-## magnet_dumbbell_z     100.00
-## magnet_dumbbell_y      89.49
-## pitch_forearm          81.55
-## magnet_belt_y          79.31
-## magnet_belt_z          79.25
-## magnet_dumbbell_x      73.61
-## roll_forearm           68.36
-## roll_dumbbell          56.43
-## accel_dumbbell_y       54.79
-## roll_arm               44.33
-## yaw_arm                35.62
-## total_accel_dumbbell   35.28
-## accel_forearm_x        32.98
-## magnet_forearm_z       29.79
-## accel_forearm_z        27.84
-## magnet_forearm_y       22.02
-## magnet_forearm_x       21.93
-## accel_arm_y            20.30
-## pitch_arm              19.92
-## yaw_forearm            13.00
-```
+![plot of chunk show_varimp_output](figure/show_varimp_output-1.png) 
 
-The finalModel is shown for reference purposes
+The finalModel is shown for reference purposes. Examining the out-of-bag error rate for the final model also yields an estimated error of a little over 2% - closely agreeing with the out of sample error achieved with the test data set. A plot of the error rates versus number of trees is also shown.
 
 
 ```r
@@ -511,6 +485,12 @@ model$finalModel
 ## D    0    0   72 1856    2 0.038341969
 ## E    2    7    2   24 2130 0.016166282
 ```
+
+```r
+plot(model$finalModel, main = "Error rate vs number of trees")
+```
+
+![plot of chunk show_final_model](figure/show_final_model-1.png) 
 
 
 ## Acknowledgements
